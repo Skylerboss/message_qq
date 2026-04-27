@@ -13,6 +13,7 @@
 - ✅ 自动检测版本更新
 - ✅ 完整的安装/卸载功能
 - ✅ 内置 Silk 语音编码支持（无需本地依赖）
+- ✅ 自动生成 Access Token，支持 API 认证
 
 ## 快速开始
 
@@ -45,12 +46,17 @@ bash install.sh
 | 1 | 安装/更新到最新版本 |
 | 2 | 安装指定版本 |
 | 3 | 强制重新安装当前版本 |
-| 4 | 修改镜像源配置 |
+| 4 | 修改配置（镜像源/目录/Token） |
 | 5 | 仅检查更新 |
 | 6 | 查看本地安装信息 |
 | 7 | 停止/卸载服务 |
 | 8 | 查看帮助 |
 | 0 | 退出 |
+
+**安装完成后会显示：**
+- Gateway 地址：`http://localhost:13010`
+- Access Token：安装时自动生成（默认 `sky2025`）
+- Message Bot 配置参考：Runtime 地址、媒体桥接地址、Token
 
 ### 命令行参数
 
@@ -87,6 +93,19 @@ PMHQ_IMAGE=docker.io/username/pmhq bash install.sh
 | `PMHQ_NAMESPACE` | 命名空间 | `docker_git_aliyun` |
 | `PMHQ_REPO` | 仓库名称 | `pmhq` |
 | `PMHQ_INSTALL_DIR` | 安装目录 | `/root/dev_pmh` |
+| `PMHQ_ACCESS_TOKEN` | API 访问 Token | `sky2025` |
+
+### 自定义 Access Token
+
+```bash
+# 安装时指定自定义 Token
+PMHQ_ACCESS_TOKEN=mysecret2025 bash install.sh
+
+# 或安装后通过菜单修改（选项4）
+bash install.sh
+# 选择 4. 修改配置（镜像源/目录/Token）
+# 选择 4. 修改 Access Token
+```
 
 ## 目录结构
 
@@ -97,17 +116,35 @@ PMHQ_IMAGE=docker.io/username/pmhq bash install.sh
 ├── docker-compose.yml      # Docker Compose 配置
 ├── .version               # 当前版本记录
 ├── config/
-│   └── pmhq_config.json   # PMHQ 配置文件
+│   ├── pmhq_config.json   # PMHQ 配置文件
+│   └── .access_token      # Access Token（仅所有者可读写）
 ├── qq_data/               # QQ 数据持久化
 └── plugins/               # 插件目录
 ```
 
-## 服务端口
+## 服务端口与配置
 
 | 端口 | 服务 | 说明 |
 |-----|------|------|
 | 13000 | Probe Proxy | QQ 协议代理 |
 | 13010 | Gateway | API 网关 |
+
+### Message Bot 对接配置
+
+安装完成后，在 Message Bot 后台配置：
+
+| 配置项 | 值 |
+|-----|------|
+| Message_QQ 协议 | 内置容器 |
+| Runtime 地址 | `http://服务器IP:13010` |
+| 统一访问 Token | `sky2025`（或自定义的 Token） |
+| 媒体桥接地址 | `http://服务器IP:13010/fetch` |
+| 媒体桥接 Token | 与统一访问 Token 相同 |
+
+**查看 Token：**
+```bash
+cat /root/dev_pmh/config/.access_token
+```
 
 ## 常用命令
 

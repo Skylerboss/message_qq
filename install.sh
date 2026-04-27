@@ -15,6 +15,9 @@ INSTALL_DIR="${PMHQ_INSTALL_DIR:-/root/dev_pmh}"
 # 完整镜像名称（优先级: 环境变量 > 自动组合）
 FULL_IMAGE="${PMHQ_IMAGE:-}"
 
+# PMHQ 访问 Token 配置（用于 API 认证）
+ACCESS_TOKEN="${PMHQ_ACCESS_TOKEN:-sky2025}"
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -142,6 +145,7 @@ services:
       - ./config/pmhq_config.json:/opt/pmhq_config.json:ro
     environment:
       - PMHQ_VERSION=${version}
+      - PMHQ_ACCESS_TOKEN=${ACCESS_TOKEN}
     networks:
       - pmhq_net
 
@@ -160,15 +164,21 @@ EOF
 # 创建默认配置文件
 create_default_config() {
     local config_file="${INSTALL_DIR}/config/pmhq_config.json"
-    
+    local token_file="${INSTALL_DIR}/config/.access_token"
+
+    # 保存 token 到独立文件（供用户查看）
+    echo "$ACCESS_TOKEN" > "$token_file"
+    chmod 600 "$token_file"  # 设置仅所有者可读写
+
     if [ -f "$config_file" ]; then
-        echo -e "${YELLOW}⚠️ 配置文件已存在，跳过创建${NC}"
+        echo -e "${YELLOW}⚠️ 配置文件已存在，保留现有配置${NC}"
+        echo -e "${BLUE}ℹ️  Access Token 已保存至: ${token_file}${NC}"
         return 0
     fi
-    
+
     echo -e "${BLUE}⚙️  创建默认配置文件${NC}"
-    
-    cat > "$config_file" << 'EOF'
+
+    cat > "$config_file" << EOF
 {
     "qq_path": "",
     "quick_login_qq": "",
@@ -177,11 +187,13 @@ create_default_config() {
     "default_port": 13001,
     "debug": false,
     "qq_console": true,
-    "headless": true
+    "headless": true,
+    "access_token": "${ACCESS_TOKEN}"
 }
 EOF
-    
+
     echo -e "${GREEN}✅ 默认配置创建完成${NC}"
+    echo -e "${BLUE}🔐 Access Token: ${ACCESS_TOKEN}${NC}"
     echo -e "${YELLOW}💡 提示: 如需修改配置，请编辑: ${config_file}${NC}"
 }
 
@@ -211,12 +223,21 @@ start_service() {
         echo "  • 安装目录: ${INSTALL_DIR}"
         echo "  • QQ 数据: ${INSTALL_DIR}/qq_data"
         echo "  • 配置文件: ${INSTALL_DIR}/config/pmhq_config.json"
+        echo "  • Token 文件: ${INSTALL_DIR}/config/.access_token"
+        echo ""
+        echo "🔐 访问凭证:"
+        echo "  • Access Token: ${ACCESS_TOKEN}"
         echo ""
         echo "🔧 常用命令:"
         echo "  • 查看日志: docker logs -f pmhq"
         echo "  • 停止服务: docker-compose down"
         echo "  • 重启服务: docker-compose restart"
         echo "  • 更新版本: bash ${INSTALL_DIR}/install.sh"
+        echo ""
+        echo "💡 Message Bot 配置参考:"
+        echo "  • Runtime 地址: http://服务器IP:13010"
+        echo "  • 媒体桥接地址: http://服务器IP:13010/fetch"
+        echo "  • 统一访问 Token: ${ACCESS_TOKEN}"
         echo ""
         # 等待服务启动
         echo -e "${BLUE}⏳ 等待服务初始化 (约60秒)...${NC}"
@@ -330,6 +351,7 @@ show_menu() {
     echo -e "${BLUE}当前配置:${NC}"
     echo "  镜像源: ${image_source}"
     echo "  安装目录: ${INSTALL_DIR}"
+    echo "  Access Token: ${ACCESS_TOKEN}"
     if [ "$current_version" != "none" ]; then
         echo "  当前版本: ${current_version}"
         if [ "$current_version" != "$latest_version" ]; then
@@ -346,7 +368,7 @@ show_menu() {
     echo "  1. 安装/更新到最新版本"
     echo "  2. 安装指定版本"
     echo "  3. 强制重新安装当前版本"
-    echo "  4. 修改镜像源配置"
+    echo "  4. 修改配置（镜像源/目录/Token）"
     echo "  5. 仅检查更新（不安装）"
     echo "  6. 查看本地安装信息"
     echo "  7. 停止/卸载服务"
@@ -410,15 +432,17 @@ change_config() {
         echo "  仓库名: $REPO_NAME"
     fi
     echo "  安装目录: $INSTALL_DIR"
+    echo "  Access Token: $ACCESS_TOKEN"
     echo ""
     echo "配置选项:"
     echo "  1. 使用完整镜像名（如 docker.io/username/pmhq）"
     echo "  2. 分别配置仓库/命名空间/仓库名"
     echo "  3. 修改安装目录"
+    echo "  4. 修改 Access Token"
     echo "  0. 返回主菜单"
     echo ""
-    read -p "请选择 [0-3]: " config_choice
-    
+    read -p "请选择 [0-4]: " config_choice
+
     case $config_choice in
         1)
             read -p "请输入完整镜像名 (如 docker.io/username/pmhq): " new_image
@@ -447,6 +471,23 @@ change_config() {
             if [ -n "$new_dir" ]; then
                 INSTALL_DIR="$new_dir"
                 echo -e "${GREEN}✅ 已设置安装目录: $INSTALL_DIR${NC}"
+            fi
+            ;;
+        4)
+            read -p "请输入新的 Access Token [${ACCESS_TOKEN}]: " new_token
+            if [ -n "$new_token" ]; then
+                ACCESS_TOKEN="$new_token"
+                echo -e "${GREEN}✅ 已设置 Access Token: $ACCESS_TOKEN${NC}"
+                # 同步更新配置文件
+                local config_file="${INSTALL_DIR}/config/pmhq_config.json"
+                local token_file="${INSTALL_DIR}/config/.access_token"
+                if [ -f "$config_file" ]; then
+                    # 使用 sed 替换 token（简单方式）
+                    sed -i "s/\"access_token\": \"[^\"]*\"/\"access_token\": \"$ACCESS_TOKEN\"/" "$config_file" 2>/dev/null || true
+                    echo "$ACCESS_TOKEN" > "$token_file"
+                    chmod 600 "$token_file"
+                    echo -e "${BLUE}ℹ️  配置文件已更新，重启容器后生效${NC}"
+                fi
             fi
             ;;
         0)
