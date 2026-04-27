@@ -539,6 +539,29 @@ uninstall_service() {
 
 # 主函数
 main() {
+    # 检测是否通过管道运行（stdin不是终端）
+    if [ ! -t 0 ]; then
+        echo ""
+        echo -e "${YELLOW}⚠️  检测到通过管道运行 (curl ... | bash)${NC}"
+        echo ""
+        echo "此方式无法显示交互式菜单，请改用以下方式："
+        echo ""
+        echo -e "${GREEN}方式1 - 使用 process substitution:${NC}"
+        echo "  bash <(curl -fsSL https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh)"
+        echo ""
+        echo -e "${GREEN}方式2 - 先下载再运行:${NC}"
+        echo "  curl -fsSL -o install.sh https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh"
+        echo "  bash install.sh"
+        echo ""
+        echo -e "${GREEN}方式3 - 直接安装最新版（非交互）:${NC}"
+        echo "  curl -fsSL ... | bash -s 7.3.2-silk-v2"
+        echo ""
+        echo -e "${BLUE}当前将执行默认操作：安装最新版本${NC}"
+        echo ""
+        do_install "$(get_latest_version)" false
+        exit $?
+    fi
+    
     # 处理命令行参数（兼容非交互模式）
     while [[ $# -gt 0 ]]; do
         case $1 in
