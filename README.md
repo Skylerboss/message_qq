@@ -183,7 +183,6 @@ docker build -t pmhq:custom .
 ## 相关项目
 
 - [PMHQ 官方仓库](https://github.com/linyuchen/PMHQ)
-- [Message Bot](https://github.com/your-repo/message-bot)
 
 ## License
 
