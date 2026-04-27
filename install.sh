@@ -537,26 +537,27 @@ uninstall_service() {
     read -p "按回车键继续..."
 }
 
+# 检测是否通过管道运行
+is_pipe_mode() {
+    # 方法1: 检测stdin是否是终端
+    if ! test -t 0 2>/dev/null; then
+        return 0
+    fi
+    # 方法2: 检测stdin是否是管道
+    if [ -p /dev/stdin ] 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
 # 主函数
 main() {
-    # 检测是否通过管道运行（stdin不是终端）
-    if [ ! -t 0 ]; then
+    # 如果是管道运行且没有参数，默认执行安装
+    if is_pipe_mode && [ $# -eq 0 ]; then
         echo ""
         echo -e "${YELLOW}⚠️  检测到通过管道运行 (curl ... | bash)${NC}"
         echo ""
-        echo "此方式无法显示交互式菜单，请改用以下方式："
-        echo ""
-        echo -e "${GREEN}方式1 - 使用 process substitution:${NC}"
-        echo "  bash <(curl -fsSL https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh)"
-        echo ""
-        echo -e "${GREEN}方式2 - 先下载再运行:${NC}"
-        echo "  curl -fsSL -o install.sh https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh"
-        echo "  bash install.sh"
-        echo ""
-        echo -e "${GREEN}方式3 - 直接安装最新版（非交互）:${NC}"
-        echo "  curl -fsSL ... | bash -s 7.3.2-silk-v2"
-        echo ""
-        echo -e "${BLUE}当前将执行默认操作：安装最新版本${NC}"
+        echo -e "${BLUE}正在自动安装最新版本...${NC}"
         echo ""
         do_install "$(get_latest_version)" false
         exit $?
