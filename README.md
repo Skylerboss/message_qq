@@ -1,9 +1,9 @@
-# PMHQ Docker 一键安装脚本
+# Message_QQ PMHQ Docker 一键安装脚本
 
 [![Docker Image](https://img.shields.io/badge/Docker-阿里云镜像-blue)](https://cr.console.aliyun.com/)
-[![Version](https://img.shields.io/badge/Version-7.3.2--silk--v2-green)]()
+[![Version](https://img.shields.io/badge/Version-7.3.4--message--qq--transfer--v2-green)]()
 
-> PMHQ (QQ Message Gateway) Docker 容器化部署方案，支持自动 Silk 语音编码
+> 面向 `Message_QQ` 的 PMHQ Docker 容器化部署方案，支持交互式安装、版本升级、媒体桥接与自动 Silk 语音编码。
 
 ## 特性
 
@@ -14,20 +14,57 @@
 - ✅ 完整的安装/卸载功能
 - ✅ 内置 Silk 语音编码支持（无需本地依赖）
 - ✅ 自动生成 Access Token，支持 API 认证
+- ✅ 自动处理同名旧容器冲突（`pmhq`）
+
+## 当前推荐脚本
+
+当前仓库中推荐用于 GitHub 发布和用户安装的脚本是：
+
+```text
+用户安装/install_message_qq.sh
+```
+
+默认安装版本：
+
+```text
+7.3.4-message-qq-transfer-v2
+```
+
+默认镜像地址：
+
+```text
+registry.cn-hangzhou.aliyuncs.com/docker_git_aliyun/pmhq:7.3.4-message-qq-transfer-v2
+```
+
+说明：
+
+1. 该版本已包含 `Message_QQ` 当前可发布的主链修复与安装脚本冲突兜底。
+2. 私聊图片/视频转发测试链已验证通过。
+3. QQ 内部图 OCR 仍在继续优化中，当前版本不承诺“内部图 OCR 完全稳定”。
+
+## 旧脚本说明
+
+以下脚本属于旧的 `PMHQ + LLBot` 安装方案，不再作为当前 `Message_QQ` 推荐安装入口：
+
+```text
+用户安装/一键PMHQ + LLBot旧版QQ安装Pinstall_qq_bot.sh
+```
+
+如果你的目标是部署当前 `Message_QQ` 方案，请优先使用 `install_message_qq.sh`。
 
 ## 快速开始
 
 ### 一键安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Skylerboss/message_qq/main/用户安装/install_message_qq.sh | bash
 ```
 
 ### 手动下载安装
 
 ```bash
-wget https://raw.githubusercontent.com/Skylerboss/message_qq/main/install.sh
-bash install.sh
+wget https://raw.githubusercontent.com/Skylerboss/message_qq/main/用户安装/install_message_qq.sh
+bash install_message_qq.sh
 ```
 
 ## 使用方法
@@ -37,7 +74,7 @@ bash install.sh
 直接运行脚本进入交互菜单：
 
 ```bash
-bash install.sh
+bash install_message_qq.sh
 ```
 
 菜单选项：
@@ -62,26 +99,26 @@ bash install.sh
 
 ```bash
 # 安装最新版本
-bash install.sh
+bash install_message_qq.sh
 
 # 安装指定版本
-bash install.sh 7.3.2-silk-v2
+bash install_message_qq.sh 7.3.4-message-qq-transfer-v2
 
 # 强制重新安装
-bash install.sh -f
+bash install_message_qq.sh -f
 
 # 查看帮助
-bash install.sh -h
+bash install_message_qq.sh -h
 ```
 
 ### 自定义镜像源
 
 ```bash
 # 使用 Docker Hub 镜像
-PMHQ_REGISTRY=docker.io PMHQ_NAMESPACE=username bash install.sh
+PMHQ_REGISTRY=docker.io PMHQ_NAMESPACE=username bash install_message_qq.sh
 
 # 或使用完整镜像名
-PMHQ_IMAGE=docker.io/username/pmhq bash install.sh
+PMHQ_IMAGE=docker.io/username/pmhq bash install_message_qq.sh
 ```
 
 ## 环境变量
@@ -99,10 +136,10 @@ PMHQ_IMAGE=docker.io/username/pmhq bash install.sh
 
 ```bash
 # 安装时指定自定义 Token
-PMHQ_ACCESS_TOKEN=mysecret2025 bash install.sh
+PMHQ_ACCESS_TOKEN=mysecret2025 bash install_message_qq.sh
 
 # 或安装后通过菜单修改（选项4）
-bash install.sh
+bash install_message_qq.sh
 # 选择 4. 修改配置（镜像源/目录/Token）
 # 选择 4. 修改 Access Token
 ```
@@ -126,8 +163,8 @@ bash install.sh
 
 | 端口 | 服务 | 说明 |
 |-----|------|------|
-| 13000 | Probe Proxy | QQ 协议代理 |
-| 13010 | Gateway | API 网关 |
+| 13000 | Probe Proxy | PMHQ 协议代理层 |
+| 13010 | Gateway | Message_QQ 主网关 |
 
 ### Message Bot 对接配置
 
@@ -161,7 +198,7 @@ docker-compose down
 docker-compose restart
 
 # 更新到最新版本
-bash install.sh
+bash install_message_qq.sh
 ```
 
 ## 镜像构建
@@ -176,9 +213,10 @@ docker build -t pmhq:custom .
 ## 注意事项
 
 1. 确保服务器已安装 Docker 和 Docker Compose
-2. 阿里云镜像可能需要登录，Docker Hub 镜像可直接拉取
+2. 默认使用阿里云公开镜像仓库，一般无需手动登录
 3. 首次启动可能需要 60 秒左右初始化
 4. QQ 数据保存在 `qq_data` 目录，删除容器不会丢失
+5. 如果系统中已存在旧的 `pmhq` 同名容器，脚本会提示是否自动清理冲突容器
 
 ## 相关项目
 
