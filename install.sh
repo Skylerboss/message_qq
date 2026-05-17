@@ -11,7 +11,7 @@ NAMESPACE="${PMHQ_NAMESPACE:-docker_git_aliyun}"
 REPO_NAME="${PMHQ_REPO:-pmhq}"
 REGISTRY="${PMHQ_REGISTRY:-registry.cn-hangzhou.aliyuncs.com}"
 INSTALL_DIR="${PMHQ_INSTALL_DIR:-/root/dev_pmh}"
-DEFAULT_VERSION="7.3.3-message-qq-transfer-v1"
+DEFAULT_VERSION="7.3.4-message-qq-transfer-v2"
 
 # 完整镜像名称（优先级: 环境变量 > 自动组合）
 FULL_IMAGE="${PMHQ_IMAGE:-}"
@@ -203,6 +203,35 @@ EOF
     echo -e "${YELLOW}💡 提示: 如需修改配置，请编辑: ${config_file}${NC}"
 }
 
+
+cleanup_conflicting_container() {
+    local container_name="pmhq"
+    local existing_id
+    existing_id=$(docker ps -aq --filter "name=^/${container_name}$" 2>/dev/null | head -n 1)
+    if [ -z "$existing_id" ]; then
+        return 0
+    fi
+
+    local compose_id
+    compose_id=$(docker-compose ps -q "$container_name" 2>/dev/null || true)
+    if [ -n "$compose_id" ] && [ "$compose_id" = "$existing_id" ]; then
+        return 0
+    fi
+
+    echo -e "${YELLOW}⚠️ 检测到同名旧容器冲突: ${container_name} (${existing_id})${NC}"
+    echo "这通常表示旧容器不是由当前安装目录的 docker-compose 管理。"
+    read -p "是否自动停止并删除该旧容器? (Y/n): " cleanup_choice
+    if [[ -z "$cleanup_choice" || $cleanup_choice =~ ^[Yy]$ ]]; then
+        docker stop "$container_name" 2>/dev/null || true
+        docker rm "$container_name" 2>/dev/null || true
+        echo -e "${GREEN}✅ 已清理冲突容器: ${container_name}${NC}"
+        return 0
+    fi
+
+    echo -e "${RED}❌ 已取消自动清理，当前无法继续启动同名容器${NC}"
+    return 1
+}
+
 # 启动服务
 start_service() {
     echo -e "${BLUE}🚀 启动 PMHQ 服务...${NC}"
@@ -211,6 +240,7 @@ start_service() {
     
     # 停止旧容器（如果存在）
     docker-compose down 2>/dev/null || true
+    cleanup_conflicting_container || exit 1
     
     # 启动新容器
     if docker-compose up -d; then
