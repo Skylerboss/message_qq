@@ -11,6 +11,7 @@ NAMESPACE="${PMHQ_NAMESPACE:-docker_git_aliyun}"
 REPO_NAME="${PMHQ_REPO:-pmhq}"
 REGISTRY="${PMHQ_REGISTRY:-registry.cn-hangzhou.aliyuncs.com}"
 INSTALL_DIR="${PMHQ_INSTALL_DIR:-/root/dev_pmh}"
+DEFAULT_VERSION="7.3.3-message-qq-transfer-v1"
 
 # 完整镜像名称（优先级: 环境变量 > 自动组合）
 FULL_IMAGE="${PMHQ_IMAGE:-}"
@@ -29,7 +30,7 @@ NC='\033[0m' # No Color
 get_latest_version() {
     # 阿里云仓库不支持 Docker Hub API，直接返回默认版本
     # 如需自动检测，可配置镜像源为 Docker Hub
-    echo "7.3.2-silk-v2"
+    echo "${DEFAULT_VERSION}"
 }
 
 # 检查本地已安装版本
@@ -123,7 +124,12 @@ setup_directories() {
 # 创建 docker-compose.yml
 create_compose_file() {
     local version=$1
-    local full_image="${REGISTRY}/${NAMESPACE}/${REPO_NAME}:${version}"
+    local full_image
+    if [ -n "$FULL_IMAGE" ]; then
+        full_image="${FULL_IMAGE}:${version}"
+    else
+        full_image="${REGISTRY}/${NAMESPACE}/${REPO_NAME}:${version}"
+    fi
     
     echo -e "${BLUE}📝 创建 docker-compose.yml${NC}"
     
@@ -303,7 +309,7 @@ show_usage() {
     echo "  bash install.sh"
     echo ""
     echo "  # 安装指定版本"
-    echo "  bash install.sh 7.3.2-silk-v2"
+    echo "  bash install.sh ${DEFAULT_VERSION}"
     echo ""
     echo "  # 强制重新安装"
     echo "  bash install.sh -f"
@@ -646,7 +652,7 @@ main() {
                 ;;
             2)
                 echo ""
-                read -p "请输入要安装的版本号 (如 7.3.2-silk-v2): " input_version
+                read -p "请输入要安装的版本号 (如 ${DEFAULT_VERSION}): " input_version
                 if [ -n "$input_version" ]; then
                     do_install "$input_version" false
                 fi
